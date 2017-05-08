@@ -35,13 +35,23 @@ type Interruption struct {
 
 func main() {
 	// Commandline Arguments:
-	// -port=8080
-	portPtr := flag.Int("port", 8080, "an int")
+	// -port=8080 -host localhost:27017 -pass 12345 -user myUser -db trailDB
+	portPtr    := flag.Int("port", 8080, "an int")
+	userPtr    := flag.String("user", "default", "Username")
+	passPtr    := flag.String("pass", "12345", "Password")
+	mgoHostPtr := flag.String("host", "localhost:27017", "hostname:port")
+        dbPtr      := flag.String("db", "thejml-trail", "Database to use")
 
 	flag.Parse()
-	port := fmt.Sprint(*portPtr)
 
-	session, err := mgo.Dial("mongodb://insertinator:JIhu8GYft6@ds133211.mlab.com:33211/thejml-trail")
+	port    := fmt.Sprint(*portPtr)
+	user    := fmt.Sprint(*userPtr)
+	pass    := fmt.Sprint(*passPtr)
+	db	:= fmt.Sprint(*dbPtr)
+	mgoHost := fmt.Sprint(*mgoHostPtr)
+
+
+	session, err := mgo.Dial("mongodb://"+user+":"+pass+"@"+mgoHost+"/"+db)
 	if err != nil {
 		panic(err)
 	}
