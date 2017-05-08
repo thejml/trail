@@ -3,8 +3,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"flag"
 	"log"
 	"net/http"
+	"time"
 
 	"goji.io"
 	"goji.io/pat"
@@ -27,11 +29,18 @@ func ResponseWithJSON(w http.ResponseWriter, json []byte, code int) {
 type Interruption struct {
 	ID       int32    `json:"id"`
 	What     string   `json:"what"`
-	When     int32    `json:"when"`
+	When     int64    `json:"when"`
 	Method   int8     `json:"method"`
 }
 
 func main() {
+	// Commandline Arguments:
+	// -port=8080
+	portPtr := flag.Int("port", 8080, "an int")
+
+	flag.Parse()
+	port := fmt.Sprint(*portPtr)
+
 	session, err := mgo.Dial("mongodb://insertinator:JIhu8GYft6@ds133211.mlab.com:33211/thejml-trail")
 	if err != nil {
 		panic(err)
@@ -43,7 +52,7 @@ func main() {
 
 	mux := goji.NewMux()
 	// Add new ToDo
-	// curl localhost:8080/interruptions -X POST -H "Content-Type: application/json" -d '{"id":0,"title":"Finish making interruption API","done":0}'
+	// curl localhost:8080/interruptions -X POST -H "Content-Type: application/json" -d '{"id":0,"what":"Finish making interruption API","method":0}'
 	mux.HandleFunc(pat.Post("/int"), addInterruption(session))
 
 	// List all current Interruptions
@@ -55,7 +64,7 @@ func main() {
 
 	// Delete a interruption by ID
 	mux.HandleFunc(pat.Delete("/int/:id"), deleteInterruption(session))
-	http.ListenAndServe("localhost:8080", mux)
+	http.ListenAndServe("localhost:"+port, mux)
 }
 
 func ensureInterruptionIndex(s *mgo.Session) {
@@ -81,6 +90,7 @@ func addInterruption(s *mgo.Session) func(w http.ResponseWriter, r *http.Request
 	return func(w http.ResponseWriter, r *http.Request) {
 		session := s.Copy()
 		defer session.Close()
+		t := time.Now().UTC().Unix();
 
 		var interruption Interruption
 		decoder := json.NewDecoder(r.Body)
@@ -89,7 +99,7 @@ func addInterruption(s *mgo.Session) func(w http.ResponseWriter, r *http.Request
 			ErrorWithJSON(w, "Incorrect body", http.StatusBadRequest)
 			return
 		}
-
+		interruption.When=t;
 		c := session.DB("thejml-trail").C("iterruptions")
 
 		err = c.Insert(interruption)
