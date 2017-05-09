@@ -2,11 +2,13 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/satori/go.uuid"
 
 	"goji.io"
 	"goji.io/pat"
@@ -14,44 +16,47 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
+// ErrorWithJSON Encodes errors into JSON for ease of use
 func ErrorWithJSON(w http.ResponseWriter, message string, code int) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(code)
 	fmt.Fprintf(w, "{message: %q}", message)
 }
 
+// ResponseWithJSON Wraps responses in JSON for ease of use
 func ResponseWithJSON(w http.ResponseWriter, json []byte, code int) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(code)
 	w.Write(json)
 }
 
+// Interruption Structure used
 type Interruption struct {
-	ID       int32    `json:"id"`
-	What     string   `json:"what"`
-	When     int64    `json:"when"`
-	Method   int8     `json:"method"`
+	//	ID     int32  `json:"id"`
+	UUID   string `json:"uuid"`
+	What   string `json:"what"`
+	When   int64  `json:"when"`
+	Method int8   `json:"method"`
 }
 
 func main() {
 	// Commandline Arguments:
 	// -port=8080 -host localhost:27017 -pass 12345 -user myUser -db trailDB
-	portPtr    := flag.Int("port", 8080, "an int")
-	userPtr    := flag.String("user", "default", "Username")
-	passPtr    := flag.String("pass", "12345", "Password")
+	portPtr := flag.Int("port", 8080, "an int")
+	userPtr := flag.String("user", "default", "Username")
+	passPtr := flag.String("pass", "12345", "Password")
 	mgoHostPtr := flag.String("host", "localhost:27017", "hostname:port")
-        dbPtr      := flag.String("db", "thejml-trail", "Database to use")
+	dbPtr := flag.String("db", "thejml-trail", "Database to use")
 
 	flag.Parse()
 
-	port    := fmt.Sprint(*portPtr)
-	user    := fmt.Sprint(*userPtr)
-	pass    := fmt.Sprint(*passPtr)
-	db	:= fmt.Sprint(*dbPtr)
+	port := fmt.Sprint(*portPtr)
+	user := fmt.Sprint(*userPtr)
+	pass := fmt.Sprint(*passPtr)
+	db := fmt.Sprint(*dbPtr)
 	mgoHost := fmt.Sprint(*mgoHostPtr)
 
-
-	session, err := mgo.Dial("mongodb://"+user+":"+pass+"@"+mgoHost+"/"+db)
+	session, err := mgo.Dial("mongodb://" + user + ":" + pass + "@" + mgoHost + "/" + db)
 	if err != nil {
 		panic(err)
 	}
@@ -70,10 +75,10 @@ func main() {
 	mux.HandleFunc(pat.Get("/int"), allInterruptions(session))
 
 	// Update an existing Interruption by ID
-	mux.HandleFunc(pat.Put("/int/:id"), updateInterruption(session))
+	mux.HandleFunc(pat.Put("/int/:uuid"), updateInterruption(session))
 
 	// Delete a interruption by ID
-	mux.HandleFunc(pat.Delete("/int/:id"), deleteInterruption(session))
+	mux.HandleFunc(pat.Delete("/int/:uuid"), deleteInterruption(session))
 	http.ListenAndServe("localhost:"+port, mux)
 }
 
@@ -84,7 +89,7 @@ func ensureInterruptionIndex(s *mgo.Session) {
 	c := session.DB("thejml-trail").C("interruptions")
 
 	index := mgo.Index{
-		Key:        []string{"id"},
+		Key:        []string{"uuid"},
 		Unique:     true,
 		DropDups:   true,
 		Background: true,
@@ -100,16 +105,19 @@ func addInterruption(s *mgo.Session) func(w http.ResponseWriter, r *http.Request
 	return func(w http.ResponseWriter, r *http.Request) {
 		session := s.Copy()
 		defer session.Close()
-		t := time.Now().UTC().Unix();
+		u1 := uuid.NewV4()
+		t := time.Now().UTC().Unix()
 
 		var interruption Interruption
 		decoder := json.NewDecoder(r.Body)
 		err := decoder.Decode(&interruption)
 		if err != nil {
 			ErrorWithJSON(w, "Incorrect body", http.StatusBadRequest)
+			log.Println("Failed insert interruption: ", err)
 			return
 		}
-		interruption.When=t;
+		interruption.When = t
+		interruption.UUID = fmt.Sprintf("%s", u1)
 		c := session.DB("thejml-trail").C("iterruptions")
 
 		err = c.Insert(interruption)
@@ -160,7 +168,7 @@ func updateInterruption(s *mgo.Session) func(w http.ResponseWriter, r *http.Requ
 		session := s.Copy()
 		defer session.Close()
 
-		id := pat.Param(r, "id")
+		uuid := pat.Param(r, "uuid")
 
 		var interruption Interruption
 		decoder := json.NewDecoder(r.Body)
@@ -172,7 +180,7 @@ func updateInterruption(s *mgo.Session) func(w http.ResponseWriter, r *http.Requ
 
 		c := session.DB("thejml-trail").C("iterruptions")
 
-		err = c.Update(bson.M{"id": id}, &interruption)
+		err = c.Update(bson.M{"UUID": uuid}, &interruption)
 		if err != nil {
 			switch err {
 			default:
@@ -194,11 +202,11 @@ func deleteInterruption(s *mgo.Session) func(w http.ResponseWriter, r *http.Requ
 		session := s.Copy()
 		defer session.Close()
 
-		id := pat.Param(r, "id")
+		uuid := pat.Param(r, "uuid")
 
 		c := session.DB("thejml-trail").C("iterruptions")
 
-		err := c.Remove(bson.M{"id": id})
+		err := c.Remove(bson.M{"UUID": uuid})
 		if err != nil {
 			switch err {
 			default:
