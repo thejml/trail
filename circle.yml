@@ -11,6 +11,7 @@ deployment:
   hub:
     branch: master
     commands:
+      - echo $DOCKER_EMAIL " " $DOCKER_USER
       - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
       - docker push thejml/trail
 test:
