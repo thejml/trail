@@ -79,7 +79,8 @@ func main() {
 
 	// Delete a interruption by ID
 	mux.HandleFunc(pat.Delete("/int/:uuid"), deleteInterruption(session))
-	http.ListenAndServe("localhost:"+port, mux)
+	log.Println("Server up and running on localhost:" + port)
+	log.Fatal(http.ListenAndServe("localhost:"+port, mux))
 }
 
 func ensureInterruptionIndex(s *mgo.Session) {
@@ -118,7 +119,7 @@ func addInterruption(s *mgo.Session) func(w http.ResponseWriter, r *http.Request
 		}
 		interruption.When = t
 		interruption.UUID = fmt.Sprintf("%s", u1)
-		c := session.DB("thejml-trail").C("iterruptions")
+		c := session.DB("thejml-trail").C("interruptions")
 
 		err = c.Insert(interruption)
 		if err != nil {
@@ -144,7 +145,7 @@ func allInterruptions(s *mgo.Session) func(w http.ResponseWriter, r *http.Reques
 		session := s.Copy()
 		defer session.Close()
 
-		c := session.DB("thejml-trail").C("iterruptions")
+		c := session.DB("thejml-trail").C("interruptions")
 
 		var interruptions []Interruption
 		err := c.Find(bson.M{}).All(&interruptions)
@@ -178,7 +179,7 @@ func updateInterruption(s *mgo.Session) func(w http.ResponseWriter, r *http.Requ
 			return
 		}
 
-		c := session.DB("thejml-trail").C("iterruptions")
+		c := session.DB("thejml-trail").C("interruptions")
 
 		err = c.Update(bson.M{"UUID": uuid}, &interruption)
 		if err != nil {
@@ -204,7 +205,7 @@ func deleteInterruption(s *mgo.Session) func(w http.ResponseWriter, r *http.Requ
 
 		uuid := pat.Param(r, "uuid")
 
-		c := session.DB("thejml-trail").C("iterruptions")
+		c := session.DB("thejml-trail").C("interruptions")
 
 		err := c.Remove(bson.M{"UUID": uuid})
 		if err != nil {
