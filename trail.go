@@ -47,6 +47,7 @@ func main() {
 	passPtr := flag.String("pass", "12345", "Password")
 	mgoHostPtr := flag.String("host", "localhost:27017", "hostname:port")
 	dbPtr := flag.String("db", "thejml-trail", "Database to use")
+	testPtr := flag.Bool("test", false, "Validate Build")
 
 	flag.Parse()
 
@@ -55,6 +56,13 @@ func main() {
 	pass := fmt.Sprint(*passPtr)
 	db := fmt.Sprint(*dbPtr)
 	mgoHost := fmt.Sprint(*mgoHostPtr)
+	test := *testPtr
+
+	// Better info should be put here.
+	if test != false {
+		log.Println("Test Passed")
+		return
+	}
 
 	session, err := mgo.Dial("mongodb://" + user + ":" + pass + "@" + mgoHost + "/" + db)
 	if err != nil {
