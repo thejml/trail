@@ -8,7 +8,7 @@ ENV GOBIN=/app/bin/
 WORKDIR /app/
 
 # Install requirements
-RUN go get gopkg.in/mgo.v2 goji.io
+RUN go get gopkg.in/mgo.v2 goji.io github.com/satori/go.uuid
 
 # Compile
 RUN go install src/trail.go
