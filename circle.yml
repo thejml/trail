@@ -15,4 +15,4 @@ deployment:
       - docker push thejml/trail
 test:
   override:
-    - /app/bin/trail -test
+    - docker run thejml/trail /app/bin/trail -test
