@@ -5,7 +5,7 @@ machine:
 dependencies:
   override:
     - docker info
-    - docker build --rm=false -t thejml/trail .
+    - docker build --rm=false -t thejml/trail:`echo $CIRCLE_SHA1|cut -b-12` .
 
 deployment:
   hub:
@@ -13,7 +13,7 @@ deployment:
     commands:
       - echo $DOCKER_EMAIL " " $DOCKER_USER
       - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
-      - docker push thejml/trail
+      - docker push thejml/trail:`echo $CIRCLE_SHA1|cut -b-12`
 test:
   override:
-    - docker run thejml/trail /app/bin/trail -test
+    - docker run thejml/trail:`echo $CIRCLE_SHA1|cut -b-12` /app/bin/trail -test
