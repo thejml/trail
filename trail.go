@@ -83,14 +83,14 @@ func main() {
 	mux.HandleFunc(pat.Get("/int"), allInterruptions(session))
 
 	// Update an existing Interruption by ID
-	mux.HandleFunc(pat.Put("/int/:uuid"), updateInterruption(session))
+	mux.HandleFunc(pat.Put("/int/:searchuuid"), updateInterruption(session))
 
 	// Search Interruptions
 	// curl localhost:8080/int/:uuid
 	mux.HandleFunc(pat.Get("/int/:searchuuid"), searchInterruptions(session))
 
 	// Delete a interruption by ID
-	mux.HandleFunc(pat.Delete("/int/:uuid"), deleteInterruption(session))
+	mux.HandleFunc(pat.Delete("/int/:searchuuid"), deleteInterruption(session))
 	log.Println("Server up and running on localhost:" + port)
 	log.Fatal(http.ListenAndServe("localhost:"+port, mux))
 }
@@ -202,12 +202,13 @@ func searchInterruptions(s *mgo.Session) func(w http.ResponseWriter, r *http.Req
 	}
 }
 
+// Overwites anything it doesn't get in the posted object with blanks.
 func updateInterruption(s *mgo.Session) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session := s.Copy()
 		defer session.Close()
 
-		uuid := pat.Param(r, "uuid")
+		searchuuid := pat.Param(r, "searchuuid")
 
 		var interruption Interruption
 		decoder := json.NewDecoder(r.Body)
@@ -219,7 +220,7 @@ func updateInterruption(s *mgo.Session) func(w http.ResponseWriter, r *http.Requ
 
 		c := session.DB("thejml-trail").C("interruptions")
 
-		err = c.Update(bson.M{"UUID": uuid}, &interruption)
+		err = c.Update(bson.M{"uuid": searchuuid}, &interruption)
 		if err != nil {
 			switch err {
 			default:
@@ -245,7 +246,7 @@ func deleteInterruption(s *mgo.Session) func(w http.ResponseWriter, r *http.Requ
 
 		c := session.DB("thejml-trail").C("interruptions")
 
-		err := c.Remove(bson.M{"UUID": searchuuid})
+		err := c.Remove(bson.M{"uuid": searchuuid})
 		if err != nil {
 			switch err {
 			default:
