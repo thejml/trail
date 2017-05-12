@@ -25,3 +25,7 @@ A simple REST API for tracking Interruptions
   Then later see a list of your interruptions with:
   
   ```$ curl localhost:8080/int```
+
+  Delete one of your interruptions with:
+  
+  ```$ curl -XDELETE localhost:8080/int/<UUID>```
