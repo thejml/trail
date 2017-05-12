@@ -79,11 +79,15 @@ func main() {
 	mux.HandleFunc(pat.Post("/int"), addInterruption(session))
 
 	// List all current Interruptions
-	// curl localhost:8080/interruptions
+	// curl localhost:8080/int
 	mux.HandleFunc(pat.Get("/int"), allInterruptions(session))
 
 	// Update an existing Interruption by ID
 	mux.HandleFunc(pat.Put("/int/:uuid"), updateInterruption(session))
+
+	// Search Interruptions
+	// curl localhost:8080/int/:uuid
+	mux.HandleFunc(pat.Get("/int/:searchuuid"), searchInterruptions(session))
 
 	// Delete a interruption by ID
 	mux.HandleFunc(pat.Delete("/int/:uuid"), deleteInterruption(session))
@@ -172,6 +176,32 @@ func allInterruptions(s *mgo.Session) func(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+func searchInterruptions(s *mgo.Session) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		session := s.Copy()
+		defer session.Close()
+
+		searchuuid := pat.Param(r, "searchuuid")
+
+		c := session.DB("thejml-trail").C("interruptions")
+
+		var interruptions []Interruption
+		err := c.Find(bson.M{"uuid": searchuuid}).All(&interruptions)
+		if err != nil {
+			ErrorWithJSON(w, "Database error", http.StatusInternalServerError)
+			log.Println("Failed get all books: ", err)
+			return
+		}
+
+		respBody, err := json.MarshalIndent(interruptions, "", "  ")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		ResponseWithJSON(w, respBody, http.StatusOK)
+	}
+}
+
 func updateInterruption(s *mgo.Session) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session := s.Copy()
@@ -211,11 +241,11 @@ func deleteInterruption(s *mgo.Session) func(w http.ResponseWriter, r *http.Requ
 		session := s.Copy()
 		defer session.Close()
 
-		uuid := pat.Param(r, "uuid")
+		searchuuid := pat.Param(r, "searchuuid")
 
 		c := session.DB("thejml-trail").C("interruptions")
 
-		err := c.Remove(bson.M{"UUID": uuid})
+		err := c.Remove(bson.M{"UUID": searchuuid})
 		if err != nil {
 			switch err {
 			default:
