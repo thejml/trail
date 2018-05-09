@@ -118,12 +118,12 @@ func addInterruption(s *mgo.Session) func(w http.ResponseWriter, r *http.Request
 	return func(w http.ResponseWriter, r *http.Request) {
 		session := s.Copy()
 		defer session.Close()
-		u1 := uuid.NewV4()
+		u1, err := uuid.NewV4()
 		t := time.Now().UTC().Unix()
 
 		var interruption Interruption
 		decoder := json.NewDecoder(r.Body)
-		err := decoder.Decode(&interruption)
+		err = decoder.Decode(&interruption)
 		if err != nil {
 			ErrorWithJSON(w, "Incorrect body", http.StatusBadRequest)
 			log.Println("Failed insert interruption: ", err)
